@@ -10,7 +10,6 @@ app.use(cors());
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.USERS}:${process.env.PASSWORD}@cluster0.h7epoo8.mongodb.net/?retryWrites=true&w=majority`;
-console.log(uri);
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -23,34 +22,55 @@ const run = async () => {
 
     app.post("/task", async (req, res) => {
       const data = req.body;
-      console.log(data);
+      data;
       const taskResult = await tasksCollection.insertOne(data);
       res.send(taskResult);
     });
 
+    app.get("/task", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const task = await tasksCollection.find(query).toArray();
+      res.send(task);
+    });
 
-    app.get('/task',async(req, res) =>{
-      const query = {}
-      const task = await tasksCollection.find(query).toArray()
-      res.send(task)
+    app.delete("/task/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const remainingTask = await tasksCollection.deleteOne(query);
+      res.send(remainingTask);
+    });
 
-    })
+    ///update task//
 
-    app.delete('/task/:id', async(req,res)=>{
-      const id = req.params.id
-      const query = {_id: ObjectId(id)}
-      const remainingTask = await tasksCollection.deleteOne(query)
-      res.send(remainingTask)
-    })
+    app.patch("/task/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedData = req.body.updateData;
+      
+
+      const updateId = { _id: ObjectId(id) };
+      const option = { upsert: true };
+
+      const filter = await tasksCollection.findOne(updateId);
+
+      const updateDoc = {
+        $set: {
+          name: updatedData.name,
+
+          dateTime: updatedData.dateTime,
+
+          description: updatedData.description,
+        },
+      };
+      const result = await tasksCollection.updateOne(filter, updateDoc, option);
+
+      res.send(result);
+    });
   } finally {
-
-
   }
 };
 
-run().then((error) => {
-  
-});
+run().then((error) => {});
 
 app.get("/", (req, res) => {
   res.send("to-do-server is running");
